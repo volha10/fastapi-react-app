@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import Navbar from './components/Navbar'
+import Footer from './components/Footer'
 
 
 function App() {
@@ -11,12 +12,14 @@ function App() {
   return (
     <>
       <Navbar />
-        <Routes>
-          <Route path="/" Component={HomePage} />
-          <Route path="/login" Component={LoginPage} />
-          <Route path="/signup" Component={SignupPage} />
+      <div>
+          <Routes>
+            <Route path="/" Component={HomePage} />
+            <Route path="/login" Component={LoginPage} />
+            <Route path="/signup" Component={SignupPage} />
         </Routes>
-      <h1>Footer</h1>
+      </div>
+      <Footer />
     </>
   )
 }
