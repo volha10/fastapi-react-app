@@ -11,7 +11,7 @@ const SignupPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch("http://localhost:8000/signup", {
+      const response = await fetch("http://localhost:8000/api/v1/users/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -22,7 +22,7 @@ const SignupPage = () => {
       const result = await response.json();
 
       if (response.ok){
-        console.log("Success: ", result);
+        console.log("Success: ", JSON.stringify(result));
 
       } else {
         console.log("Error: ", result);
@@ -53,6 +53,7 @@ const SignupPage = () => {
               Full Name<span>*</span>
             </label>
             <input
+              autoComplete='off'
               type="text"
               id="name"
               name="name"
@@ -67,6 +68,7 @@ const SignupPage = () => {
               Email<span>*</span>
             </label>
             <input
+              autoComplete='off'
               type="email"
               id="email"
               name="email"
@@ -81,6 +83,7 @@ const SignupPage = () => {
               Password<span>*</span>
             </label>
             <input
+              autoComplete='off'
               type="password"
               id="password"
               name="password"
