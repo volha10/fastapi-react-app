@@ -82,7 +82,7 @@ const SignupPage = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className={`w-full bg-gray-600 bg-opacity-20 focus:bg-transparent focus:ring-2 focus:ring-yellow-900 rounded border border-gray-600 focus:border-yellow-500 text-base outline-none text-gray-100 py-1 px-3 leading-8 transition-colors duration-200 ease-in-out ${error ? "border-red-500 focus:ring-red-900" : "border-gray-600 focus:ring-yellow-900"
+              className={`w-full bg-gray-600 bg-opacity-20 focus:bg-transparent focus:ring-2 focus:ring-yellow-900 rounded border border-gray-600 focus:border-yellow-500 text-base outline-none text-gray-100 py-1 px-3 leading-8 transition-colors duration-200 ease-in-out ${error ? "border-red-400 focus:ring-red-900" : "border-gray-600 focus:ring-yellow-900"
                 }`}
               required
             />
@@ -90,10 +90,10 @@ const SignupPage = () => {
             {/* Error message with icon */}
             {error && (
               <div className="flex items-center gap-1 mt-1.5">
-                <svg xmlns="http://www.w3.org" className="h-3 w-3 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                <svg xmlns="http://www.w3.org" className="h-3 w-3 text-red-400" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
-                <p className="text-red-500 text-[11px] font-medium uppercase tracking-wider">
+                <p className="text-red-400 text-[11px] font-medium uppercase tracking-wider">
                   {error}
                 </p>
               </div>
