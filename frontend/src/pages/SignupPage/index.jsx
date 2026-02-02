@@ -1,5 +1,5 @@
 import { useState } from 'react'
-
+import { Link } from 'react-router-dom';
 
 const SignupPage = () => {
   const [formData, setFormData] = useState({
@@ -9,10 +9,12 @@ const SignupPage = () => {
   });
 
   const [error, setError] = useState("");
+  const [commonError, setCommonError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setCommonError("");
 
     try {
       const response = await fetch("http://localhost:8000/api/v1/users/signup", {
@@ -28,22 +30,29 @@ const SignupPage = () => {
       if (response.ok) {
         console.log("Success: ", JSON.stringify(result));
 
-      } else {
+      } else if (response.status == 409) {
         console.log("Error: ", result);
         setError(result.detail);
       }
-
+      else {
+        console.log("Error: ", result);
+        setCommonError("Something went wrong. Try again later.");
+      }
     }
     catch (error) {
-      console.log("Error: ", error)
+      console.log("Error: ", error);
+      setCommonError("Something went wrong. Try again later.");
     }
-
   }
 
   const handleChange = async (e) => {
     if (error) {
       setError("");
     }
+    else if (commonError) {
+      setCommonError("");
+    }
+
     // Dynamically update the state based on input 'name'
     setFormData({
       ...formData, // 1. Copy all existing data (Spread Operator)
@@ -56,6 +65,17 @@ const SignupPage = () => {
       <div className="container px-5 py-24 mx-auto flex flex-wrap items-center justify-center">
         <form onSubmit={handleSubmit} className="lg:w-2/6 md:w-1/2 bg-gray-800 bg-opacity-50 rounded-lg p-8 flex flex-col w-full mt-10 md:mt-0">
           <h2 className="text-white text-lg font-medium title-font mb-5">Sign Up</h2>
+          {/* Common Error message */}
+          {commonError && (
+            <div className="flex items-center gap-1 mb-3">
+              <svg xmlns="http://www.w3.org" className="h-3 w-3 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <p className="text-red-400 text-[11px] font-medium uppercase tracking-wider">
+                {commonError}
+              </p>
+            </div>
+          )}
           <div className="relative mb-4">
             <label htmlFor="name" className="leading-7 text-sm text-gray-400">
               Full Name<span>*</span>
@@ -118,9 +138,12 @@ const SignupPage = () => {
           <button type="submit" className="text-white bg-yellow-500 border-0 py-2 px-8 focus:outline-none hover:bg-yellow-600 rounded text-lg">
             Create account
           </button>
-          <button type="button" className="text-center w-full block text-yellow-500 hover:underline text-xs mt-2">
+          <Link
+            to="/login"
+            className="text-center w-full block text-yellow-500 hover:underline text-xs mt-4"
+          >
             Already have an account? Sign in instead.
-          </button>
+          </Link>
         </form>
       </div>
     </section>
