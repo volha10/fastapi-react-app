@@ -1,0 +1,4 @@
+fastapi[standart]==0.128.0
+pymongo==4.16.0
+pwdlib[argon2]==0.3.0
+ruff==0.14.14
