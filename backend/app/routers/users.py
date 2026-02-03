@@ -1,9 +1,16 @@
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Request, HTTPException, status
+from fastapi import APIRouter, Request, HTTPException, status, Depends
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+import jwt
 from pydantic import BaseModel, BeforeValidator, ConfigDict, EmailStr, Field
 from pymongo import errors
 from pwdlib import PasswordHash
+
+APP_JWT_ALG = "HS256"
+APP_JWT_SECRET = "secret"
+APP_JWT_EXP = 60 * 60
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
@@ -22,9 +29,21 @@ class UserSignin(BaseModel):
     password: str
 
 
-class UserBase(BaseModel):
+class User(BaseModel):
     # validation_alias = read from DB as '_id'
     # field name 'id' = output to JSON as 'id'
+    id: StrObjectId = Field(validation_alias="_id")
+    name: str
+    email: EmailStr
+
+    password: str
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+class UserOut(BaseModel):
     id: StrObjectId = Field(validation_alias="_id")
     name: str
     email: EmailStr
@@ -34,18 +53,49 @@ class UserBase(BaseModel):
     )
 
 
-class User(UserBase):
-    password: str
+class UserSigninOut(BaseModel):
+    access_token: str
 
 
-class UserResponse(UserBase):
-    pass
-
-
+oath2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/signin")
 password_hash = PasswordHash.recommended()
 
 
-@router.post("/signup", response_model=UserResponse)
+def generate_token(emal: EmailStr) -> str:
+    now = datetime.now(timezone.utc)
+    exp = now + timedelta(seconds=APP_JWT_EXP)
+
+    token = jwt.encode(
+        {"email": emal, "exp": exp}, key=APP_JWT_SECRET, algorithm=APP_JWT_ALG
+    )
+
+    return token
+
+
+async def get_current_user(
+    request: Request, token: str = Depends(oath2_scheme)
+) -> User:
+    try:
+        payload = jwt.decode(token, key=APP_JWT_SECRET, algorithms=[APP_JWT_ALG])
+        print(payload)
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired"
+        )
+
+    found_result: dict = await request.app.state.db["users"].find_one(
+        {"email": payload["email"]}
+    )
+
+    if not found_result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    return User(**found_result)
+
+
+@router.post("/signup", response_model=UserOut)
 async def signup(request: Request, user_in: UserSignup):
     try:
         hash = password_hash.hash(user_in.password)
@@ -72,22 +122,26 @@ async def signup(request: Request, user_in: UserSignup):
     return new_user
 
 
-@router.post("/signin", response_model=UserResponse)
-async def signin(request: Request, user_in: UserSignin):
+@router.post("/signin", response_model=UserSigninOut, include_in_schema=False)
+async def signin(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
+    user_in = UserSignin(email=form_data.username, password=form_data.password)
     found_result: dict = await request.app.state.db["users"].find_one(
         {"email": user_in.email}
     )
 
-    if not found_result:
+    if not found_result or not password_hash.verify(
+        user_in.password, found_result["password"]
+    ):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Incorrect email or password"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
         )
 
-    user = User(**found_result)
+    token = generate_token(user_in.email)
 
-    if not password_hash.verify(user_in.password, user.password):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Incorrect email or password"
-        )
+    return {"access_token": token}
 
-    return user
+
+@router.get("/me", response_model=UserOut)
+def get_me(current_user: User = Depends(get_current_user)):
+    return current_user

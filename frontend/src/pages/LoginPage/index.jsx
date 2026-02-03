@@ -27,7 +27,7 @@ const LoginPage = () => {
       if (response.ok) {
         console.log("Success: ", JSON.stringify(result));
 
-      } else if (response.status == 404) {
+      } else if (response.status == 401) {
         console.log("Error: ", result);
         setError(result.detail);
       }
