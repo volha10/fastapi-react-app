@@ -14,18 +14,26 @@ const LoginPage = () => {
     setError("");
 
     try {
+      console.log(formData);
+
+      const params = new URLSearchParams();
+      // using the 'username' field instead of 'email' for Swagger UI compatibility (Authorize button)
+      params.append("username", formData.email); 
+      params.append("password", formData.password);
+
       const response = await fetch("http://localhost:8000/api/v1/users/signin", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/x-www-form-urlencoded"
         },
-        body: JSON.stringify(formData),
+        body: params.toString(),
       });
 
       const result = await response.json();
 
       if (response.ok) {
         console.log("Success: ", JSON.stringify(result));
+        localStorage.setItem("access_token", result.access_token)
 
       } else if (response.status == 401) {
         console.log("Error: ", result);
@@ -74,7 +82,7 @@ const LoginPage = () => {
               autoComplete='off'
               type="email"
               id="email"
-              name="email"
+              name="email" 
               value={formData.email}
               onChange={handleChange}
               className="w-full bg-gray-600 bg-opacity-20 focus:bg-transparent focus:ring-2 focus:ring-yellow-900 rounded border border-gray-600 focus:border-yellow-500 text-base outline-none text-gray-100 py-1 px-3 leading-8 transition-colors duration-200 ease-in-out"
