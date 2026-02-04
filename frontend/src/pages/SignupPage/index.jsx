@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const SignupPage = () => {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -29,6 +32,7 @@ const SignupPage = () => {
 
       if (response.ok) {
         console.log("Success: ", JSON.stringify(result));
+        navigate("/login");
 
       } else if (response.status == 409) {
         console.log("Error: ", result);
