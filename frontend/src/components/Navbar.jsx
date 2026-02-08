@@ -48,7 +48,10 @@ const Navbar = () => {
             </>
 
           ) : (
-            <span className="mr-5 text-gray-900 font-medium">Hi, {user.name}</span>
+            <>
+              <span className="mr-5 text-gray-900 font-medium">Hi, {user.name}</span>
+              <Link to={'/profile'} className="mr-5 hover:text-gray-900">Profile</Link>
+            </>
           )}
 
         </nav>

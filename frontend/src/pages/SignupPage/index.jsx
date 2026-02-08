@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useContext, useState } from 'react'
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
+import { useEffect } from 'react';
 
 const SignupPage = () => {
   const navigate = useNavigate();
@@ -13,6 +15,18 @@ const SignupPage = () => {
 
   const [error, setError] = useState("");
   const [commonError, setCommonError] = useState("");
+
+  const { loading, user } = useContext(AuthContext);
+
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
+
+  if (loading) {
+    return <div className='p-10'>Loading...</div>
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -1,13 +1,29 @@
-import { useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 
 const LoginPage = () => {
+  const navigate = useNavigate();
+
+  const { user, fetchMe, loading } = useContext(AuthContext);
+
   const [formData, setFormData] = useState({
     email: "",
     password: ""
   });
 
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
+
+  if (loading) {
+    return <div className='p-10'>Loading...</div>
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,7 +34,7 @@ const LoginPage = () => {
 
       const params = new URLSearchParams();
       // using the 'username' field instead of 'email' for Swagger UI compatibility (Authorize button)
-      params.append("username", formData.email); 
+      params.append("username", formData.email);
       params.append("password", formData.password);
 
       const response = await fetch("http://localhost:8000/api/v1/users/signin", {
@@ -33,7 +49,11 @@ const LoginPage = () => {
 
       if (response.ok) {
         console.log("Success: ", JSON.stringify(result));
-        localStorage.setItem("access_token", result.access_token)
+        localStorage.setItem("access_token", result.access_token);
+
+        await fetchMe();
+
+        navigate("/");
 
       } else if (response.status == 401) {
         console.log("Error: ", result);
@@ -82,7 +102,7 @@ const LoginPage = () => {
               autoComplete='off'
               type="email"
               id="email"
-              name="email" 
+              name="email"
               value={formData.email}
               onChange={handleChange}
               className="w-full bg-gray-600 bg-opacity-20 focus:bg-transparent focus:ring-2 focus:ring-yellow-900 rounded border border-gray-600 focus:border-yellow-500 text-base outline-none text-gray-100 py-1 px-3 leading-8 transition-colors duration-200 ease-in-out"
