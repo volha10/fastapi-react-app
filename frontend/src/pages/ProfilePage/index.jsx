@@ -12,7 +12,7 @@ const ProfilePage = () => {
     }
 
     return (
-        <div className='p-10 bg-gray-900 text-white'>
+        <div className='p-10 bg-gray-900 text-white flex-grow min-h-full'>
             <h1 className='text-3xl font-bold mb-4'>Profile Page</h1>
             {user ? (
                 <div className='bg-gray-800 container'>

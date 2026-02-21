@@ -79,7 +79,7 @@ const SignupPage = () => {
   }
 
   return (
-    <section className="text-gray-400 bg-gray-900 body-font">
+    <section className="text-gray-400 bg-gray-900 body-font flex-grow min-h-full">
       <div className="container px-5 py-24 mx-auto flex flex-wrap items-center justify-center">
         <form onSubmit={handleSubmit} className="lg:w-2/6 md:w-1/2 bg-gray-800 bg-opacity-50 rounded-lg p-8 flex flex-col w-full mt-10 md:mt-0">
           <h2 className="text-white text-lg font-medium title-font mb-5">Sign Up</h2>

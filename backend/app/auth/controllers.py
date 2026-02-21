@@ -1,61 +1,19 @@
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
 
 from fastapi import APIRouter, Request, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import jwt
-from pydantic import BaseModel, BeforeValidator, ConfigDict, EmailStr, Field
+from pydantic import EmailStr
 from pymongo import errors
 from pwdlib import PasswordHash
+
+from app.auth.schemas import User, UserOut, UserSignin, UserSigninOut, UserSignup
 
 APP_JWT_ALG = "HS256"
 APP_JWT_SECRET = "secret"
 APP_JWT_EXP = 60 * 60
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
-
-
-StrObjectId = Annotated[str, BeforeValidator(str)]
-
-
-class UserSignup(BaseModel):
-    name: str
-    email: EmailStr
-    password: str
-
-
-class UserSignin(BaseModel):
-    email: EmailStr
-    password: str
-
-
-class User(BaseModel):
-    # validation_alias = read from DB as '_id'
-    # field name 'id' = output to JSON as 'id'
-    id: StrObjectId = Field(validation_alias="_id")
-    name: str
-    email: EmailStr
-
-    password: str
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-
-
-class UserOut(BaseModel):
-    id: StrObjectId = Field(validation_alias="_id")
-    name: str
-    email: EmailStr
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-    )
-
-
-class UserSigninOut(BaseModel):
-    access_token: str
-
 
 oath2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/signin")
 password_hash = PasswordHash.recommended()
@@ -72,15 +30,25 @@ def generate_token(emal: EmailStr) -> str:
     return token
 
 
-async def get_current_user(
-    request: Request, token: str = Depends(oath2_scheme)
-) -> User:
+def verify_token(token: str) -> dict | None:
     try:
         payload = jwt.decode(token, key=APP_JWT_SECRET, algorithms=[APP_JWT_ALG])
         print(payload)
-    except jwt.ExpiredSignatureError:
+    except (jwt.ExpiredSignatureError, jwt.exceptions.InvalidSignatureError):
+        return None
+
+    return payload
+
+
+async def get_current_user(
+    request: Request, token: str = Depends(oath2_scheme)
+) -> User:
+    payload = verify_token(token)
+
+    if not payload:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token is invalid or expired",
         )
 
     found_result: dict = await request.app.state.db["users"].find_one(

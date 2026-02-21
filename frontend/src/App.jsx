@@ -11,9 +11,9 @@ import ProfilePage from './pages/ProfilePage'
 function App() {
 
   return (
-    <>
+    <div className="flex flex-col min-h-screen ">
       <Navbar />
-      <div>
+      <div className="flex-grow flex flex-col">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/profile" element={
@@ -26,7 +26,7 @@ function App() {
         </Routes>
       </div>
       <Footer />
-    </>
+    </div>
   )
 }
 
