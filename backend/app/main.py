@@ -5,11 +5,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pymongo import AsyncMongoClient
 
 from .auth import controllers
+from .core.config import settings
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with AsyncMongoClient("mongodb://localhost:27020") as client:
+    async with AsyncMongoClient(settings.MONGO_DB_URL) as client:
         await client.admin.command("ping")
         app.state.db = client.get_database("auth_db")
         # await app.state.db["users"].drop()

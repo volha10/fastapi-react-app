@@ -17,11 +17,8 @@ from app.auth.schemas import (
     UserSigninOut,
     UserSignup,
 )
+from app.core.config import settings
 
-APP_JWT_ALG = "HS256"
-APP_JWT_SECRET = "secret"
-APP_JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 15
-APP_JWT_REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
@@ -39,8 +36,8 @@ def generate_token(
 
     token = jwt.encode(
         {"email": email, "exp": exp, "type": token_type},
-        key=APP_JWT_SECRET,
-        algorithm=APP_JWT_ALG,
+        key=settings.APP_JWT_SECRET,
+        algorithm=settings.APP_JWT_ALG,
     )
 
     return token
@@ -48,7 +45,9 @@ def generate_token(
 
 def verify_token(token: str) -> dict | None:
     try:
-        payload: dict = jwt.decode(token, key=APP_JWT_SECRET, algorithms=[APP_JWT_ALG])
+        payload: dict = jwt.decode(
+            token, key=settings.APP_JWT_SECRET, algorithms=[settings.APP_JWT_ALG]
+        )
         print(payload)
     except (jwt.ExpiredSignatureError, jwt.exceptions.InvalidSignatureError) as error:
         print(error)
@@ -124,12 +123,12 @@ async def signin(request: Request, form_data: OAuth2PasswordRequestForm = Depend
 
     access_token = generate_token(
         user_in.email,
-        timedelta(minutes=APP_JWT_ACCESS_TOKEN_EXPIRE_MINUTES),
+        timedelta(minutes=settings.APP_JWT_ACCESS_TOKEN_EXPIRE_MINUTES),
         JwtTokenType.ACCESS,
     )
     refresh_token = generate_token(
         user_in.email,
-        timedelta(days=APP_JWT_REFRESH_TOKEN_EXPIRE_DAYS),
+        timedelta(days=settings.APP_JWT_REFRESH_TOKEN_EXPIRE_DAYS),
         JwtTokenType.REFRESH,
     )
 
@@ -154,13 +153,13 @@ def refresh(refresh_token: RefreshTokenHeader) -> RefreshOut:
 
     new_access_token = generate_token(
         sub,
-        expires_delta=timedelta(minutes=APP_JWT_ACCESS_TOKEN_EXPIRE_MINUTES),
+        expires_delta=timedelta(minutes=settings.APP_JWT_ACCESS_TOKEN_EXPIRE_MINUTES),
         token_type=JwtTokenType.ACCESS,
     )
 
     new_refresh_token = generate_token(
         sub,
-        expires_delta=timedelta(days=APP_JWT_REFRESH_TOKEN_EXPIRE_DAYS),
+        expires_delta=timedelta(days=settings.APP_JWT_REFRESH_TOKEN_EXPIRE_DAYS),
         token_type=JwtTokenType.REFRESH,
     )
 
