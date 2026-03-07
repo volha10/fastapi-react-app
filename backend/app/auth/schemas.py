@@ -42,3 +42,11 @@ class UserOut(BaseModel):
 
 class UserSigninOut(BaseModel):
     access_token: str
+    refresh_token: str
+    token_type: str
+
+
+class RefreshOut(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str

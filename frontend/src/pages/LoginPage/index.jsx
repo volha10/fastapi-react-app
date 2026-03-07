@@ -1,10 +1,14 @@
 import { useContext, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get the path from the state or default to home "/" 
+  const from = location.state?.from?.pathname || "/"
 
   const { user, fetchMe, loading } = useContext(AuthContext);
 
@@ -50,10 +54,12 @@ const LoginPage = () => {
       if (response.ok) {
         console.log("Success: ", JSON.stringify(result));
         localStorage.setItem("access_token", result.access_token);
+        localStorage.setItem("refresh_token", result.refresh_token);
 
         await fetchMe();
 
-        navigate("/");
+        // Redirect back 
+        navigate(from, { replace: true });
 
       } else if (response.status == 401) {
         console.log("Error: ", result);
