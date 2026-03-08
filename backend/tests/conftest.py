@@ -9,13 +9,13 @@ from app.main import app
 
 
 class FakeRepository:
-    def __init__(self):
+    def __init__(self) -> None:
         self.user = {}
 
-    async def create(self, _: dict):
+    async def create(self, _: dict) -> dict | None:
         return self.user
-    
-    async def get(self, _: EmailStr):
+
+    async def get(self, _: EmailStr) -> dict | None:
         return self.user
 
 
@@ -33,7 +33,9 @@ async def fake_repo() -> AsyncGenerator[FakeRepository, None]:
 @pytest.fixture
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
     async with app.router.lifespan_context(app) as _:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
             yield client
 
 
@@ -41,17 +43,17 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
 def user_signup_payload() -> dict:
     """Provides valid signup data."""
     return {
-        "name": "test user", 
-        "email": "test@example.com", 
-        "password": "test_password123"
+        "name": "test user",
+        "email": "test@example.com",
+        "password": "test_password123",
     }
 
 
 @pytest.fixture
-def db_user(user_signup_payload):
+def db_user(user_signup_payload: dict) -> dict:
     """Provides a mock DB user based on the signup data."""
     return {
         "name": user_signup_payload["name"],
         "email": user_signup_payload["email"],
-        "_id": "mock_id"
+        "_id": "mock_id",
     }

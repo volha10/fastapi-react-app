@@ -4,7 +4,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 
 
 class UserRepository:
-    def __init__(self, db: AsyncDatabase):
+    def __init__(self, db: AsyncDatabase) -> None:
         self.collection = db["users"]
 
     async def create(self, user_data: dict) -> dict | None:

@@ -20,10 +20,10 @@ RefreshTokenHeader = Annotated[str, Header(alias="X-Refresh-Token")]
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
 
-@router.post("/signup", response_model=UserOut)
+@router.post("/signup")
 async def signup(
     user_in: UserSignup, repo: UserRepository = Depends(get_user_repository)
-):
+) -> UserOut:
     new_user = await service.register_user(user_in, repo)
 
     if not new_user:
@@ -32,14 +32,14 @@ async def signup(
             detail="The user with this email already exists",
         )
 
-    return new_user
+    return UserOut(**new_user)
 
 
-@router.post("/signin", response_model=UserSigninOut)
+@router.post("/signin")
 async def signin(
     form_data: OAuth2PasswordRequestForm = Depends(),
     repo: UserRepository = Depends(get_user_repository),
-):
+) -> UserSigninOut:
     user_in = UserSignin(email=form_data.username, password=form_data.password)
 
     found_result = await service.authenticate_user(user_in, repo)
@@ -50,7 +50,7 @@ async def signin(
             detail="Incorrect email or password",
         )
 
-    return service.create_user_tokens(user_in.email)
+    return UserSigninOut(**service.create_user_tokens(user_in.email))
 
 
 @router.post("/refresh")
@@ -65,9 +65,9 @@ def refresh(refresh_token: RefreshTokenHeader) -> RefreshOut:
 
     sub = payload["email"]
 
-    return service.create_user_tokens(sub)
+    return RefreshOut(**service.create_user_tokens(sub))
 
 
-@router.get("/me", response_model=UserOut)
-def get_me(current_user: User = Depends(get_current_user)):
-    return current_user
+@router.get("/me")
+def get_me(current_user: User = Depends(get_current_user)) -> UserOut:
+    return UserOut(**current_user.model_dump())

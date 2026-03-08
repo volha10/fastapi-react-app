@@ -1,0 +1,8 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.5
+    hooks:
+      # Formatter: Ensures consistent code style
+      - id: ruff-format
+        args: [ "-v" ]
+        files: ^backend/

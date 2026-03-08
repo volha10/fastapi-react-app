@@ -1,4 +1,10 @@
 [tool.ruff.lint]
 # F401: unused-import
 # I001: unsorted-imports (isort)
-select = ["F", "I"]
+# ANN: type annotations
+# PYI: type stubs
+select = ["F", "I", "ANN", "PYI"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]

@@ -16,7 +16,7 @@ async def get_current_user(
     token: str = Depends(oath2_scheme),
     repo: UserRepository = Depends(get_user_repository),
 ) -> User:
-    payload = service.verify_token(token)
+    payload: dict | None = service.verify_token(token)
 
     if not payload:
         raise HTTPException(
@@ -24,7 +24,7 @@ async def get_current_user(
             detail="Token is invalid or expired",
         )
 
-    found_result: dict = await repo.get(payload["email"])
+    found_result: dict | None = await repo.get(payload["email"])
 
     if not found_result:
         raise HTTPException(

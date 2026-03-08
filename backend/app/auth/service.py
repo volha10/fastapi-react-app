@@ -15,7 +15,7 @@ from app.core.config import settings
 password_hash = PasswordHash.recommended()
 
 
-async def register_user(user_in: UserSignup, repo: UserRepository):
+async def register_user(user_in: UserSignup, repo: UserRepository) -> dict:
     hash = password_hash.hash(user_in.password)
 
     hashed_user = UserSignup(**user_in.model_dump(exclude={"password"}), password=hash)
@@ -25,7 +25,7 @@ async def register_user(user_in: UserSignup, repo: UserRepository):
     return new_user
 
 
-async def authenticate_user(user_in: UserSignin, repo: UserRepository) -> dict:
+async def authenticate_user(user_in: UserSignin, repo: UserRepository) -> dict | None:
     found_result = await repo.get(user_in.email)
 
     if not found_result or not password_hash.verify(
