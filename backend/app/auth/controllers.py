@@ -1,11 +1,11 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from pwdlib import PasswordHash
 
 from app.auth import service
-from app.auth.dependencies import get_user_repository
+from app.auth.dependencies import get_current_user, get_user_repository
 from app.auth.repository import UserRepository
 from app.auth.schemas import (
     RefreshOut,
@@ -18,33 +18,10 @@ from app.auth.schemas import (
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
-oath2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/signin")
+
 password_hash = PasswordHash.recommended()
 
 RefreshTokenHeader = Annotated[str, Header(alias="X-Refresh-Token")]
-
-
-async def get_current_user(
-    request: Request, token: str = Depends(oath2_scheme)
-) -> User:
-    payload = service.verify_token(token)
-
-    if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token is invalid or expired",
-        )
-
-    found_result: dict = await request.app.state.db["users"].find_one(
-        {"email": payload["email"]}
-    )
-
-    if not found_result:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
-
-    return User(**found_result)
 
 
 @router.post("/signup", response_model=UserOut)
