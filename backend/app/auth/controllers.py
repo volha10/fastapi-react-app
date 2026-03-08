@@ -1,14 +1,15 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Request, HTTPException, status, Depends, Header
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import jwt
-from pydantic import EmailStr
-from pymongo import errors
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pwdlib import PasswordHash
+from pydantic import EmailStr
 
+from app.auth.dependencies import get_user_repository
 from app.auth.models import JwtTokenType
+from app.auth.repository import UserRepository
 from app.auth.schemas import (
     RefreshOut,
     User,
@@ -18,7 +19,6 @@ from app.auth.schemas import (
     UserSignup,
 )
 from app.core.config import settings
-
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
@@ -80,24 +80,16 @@ async def get_current_user(
 
 
 @router.post("/signup", response_model=UserOut)
-async def signup(request: Request, user_in: UserSignup):
-    try:
-        hash = password_hash.hash(user_in.password)
+async def signup(
+    user_in: UserSignup, repo: UserRepository = Depends(get_user_repository)
+):
+    hash = password_hash.hash(user_in.password)
 
-        hashed_user = UserSignup(
-            **user_in.model_dump(exclude={"password"}), password=hash
-        )
+    hashed_user = UserSignup(**user_in.model_dump(exclude={"password"}), password=hash)
 
-        insert_result = await request.app.state.db["users"].insert_one(
-            hashed_user.model_dump()
-        )
+    new_user = await repo.create(hashed_user.model_dump())
 
-        new_user = await request.app.state.db["users"].find_one(
-            {"_id": insert_result.inserted_id}
-        )
-
-        print(f"New user {new_user} created successfully")
-    except errors.DuplicateKeyError:
+    if not new_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="The user with this email already exists",
