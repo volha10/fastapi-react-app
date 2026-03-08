@@ -2,7 +2,6 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from pwdlib import PasswordHash
 
 from app.auth import service
 from app.auth.dependencies import get_current_user, get_user_repository
@@ -16,23 +15,16 @@ from app.auth.schemas import (
     UserSignup,
 )
 
-router = APIRouter(prefix="/api/v1/users", tags=["users"])
-
-
-password_hash = PasswordHash.recommended()
-
 RefreshTokenHeader = Annotated[str, Header(alias="X-Refresh-Token")]
+
+router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
 
 @router.post("/signup", response_model=UserOut)
 async def signup(
     user_in: UserSignup, repo: UserRepository = Depends(get_user_repository)
 ):
-    hash = password_hash.hash(user_in.password)
-
-    hashed_user = UserSignup(**user_in.model_dump(exclude={"password"}), password=hash)
-
-    new_user = await repo.create(hashed_user.model_dump())
+    new_user = await service.register_user(user_in, repo)
 
     if not new_user:
         raise HTTPException(
