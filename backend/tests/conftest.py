@@ -2,6 +2,7 @@ from typing import AsyncGenerator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from pydantic import EmailStr
 
 from app.auth.dependencies import get_user_repository
 from app.main import app
@@ -13,6 +14,10 @@ class FakeRepository:
 
     async def create(self, _: dict):
         return self.user
+    
+    async def get(self, _: EmailStr):
+        return self.user
+
 
 @pytest.fixture
 async def fake_repo() -> AsyncGenerator[FakeRepository, None]:
