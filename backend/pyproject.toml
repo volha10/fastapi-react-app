@@ -1,0 +1,4 @@
+[tool.ruff.lint]
+# F401: unused-import
+# I001: unsorted-imports (isort)
+select = ["F", "I"]
