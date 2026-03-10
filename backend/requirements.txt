@@ -1,4 +1,4 @@
-fastapi[standart]==0.128.0
+fastapi[standart]==0.135.1
 pymongo==4.16.0
 pwdlib[argon2]==0.3.0
 pyjwt==2.11.0
