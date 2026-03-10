@@ -5,7 +5,7 @@ from pwdlib import PasswordHash
 from pydantic import EmailStr
 
 from app.auth.models import JwtTokenType
-from app.auth.repository import UserRepository
+from app.auth.repository import AbstractUserRepository
 from app.auth.schemas import (
     UserSignin,
     UserSignup,
@@ -15,7 +15,9 @@ from app.core.config import settings
 password_hash = PasswordHash.recommended()
 
 
-async def register_user(user_in: UserSignup, repo: UserRepository) -> dict:
+async def register_user(
+    user_in: UserSignup, repo: AbstractUserRepository
+) -> dict | None:
     hash = password_hash.hash(user_in.password)
 
     hashed_user = UserSignup(**user_in.model_dump(exclude={"password"}), password=hash)
@@ -25,7 +27,9 @@ async def register_user(user_in: UserSignup, repo: UserRepository) -> dict:
     return new_user
 
 
-async def authenticate_user(user_in: UserSignin, repo: UserRepository) -> dict | None:
+async def authenticate_user(
+    user_in: UserSignin, repo: AbstractUserRepository
+) -> dict | None:
     found_result = await repo.get(user_in.email)
 
     if not found_result or not password_hash.verify(

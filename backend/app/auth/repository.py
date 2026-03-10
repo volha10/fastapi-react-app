@@ -1,9 +1,21 @@
+from abc import ABC, abstractmethod
+
 from pydantic import EmailStr
 from pymongo import errors
 from pymongo.asynchronous.database import AsyncDatabase
 
 
-class UserRepository:
+class AbstractUserRepository(ABC):
+    @abstractmethod
+    async def create(self, user_data: dict) -> dict | None:
+        pass
+
+    @abstractmethod
+    async def get(self, email: str) -> dict | None:
+        pass
+
+
+class UserRepository(AbstractUserRepository):
     def __init__(self, db: AsyncDatabase) -> None:
         self.collection = db["users"]
 

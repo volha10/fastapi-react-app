@@ -5,17 +5,18 @@ from httpx import ASGITransport, AsyncClient
 from pydantic import EmailStr
 
 from app.auth.dependencies import get_user_repository
+from app.auth.repository import AbstractUserRepository
 from app.main import app
 
 
-class FakeRepository:
+class FakeRepository(AbstractUserRepository):
     def __init__(self) -> None:
         self.user = {}
 
-    async def create(self, _: dict) -> dict | None:
+    async def create(self, user_data: dict) -> dict | None:
         return self.user
 
-    async def get(self, _: EmailStr) -> dict | None:
+    async def get(self, email: EmailStr) -> dict | None:
         return self.user
 
 
