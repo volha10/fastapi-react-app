@@ -1,20 +1,24 @@
-from fastapi import Depends, HTTPException, Request, status
+from typing import Annotated
+
+from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 
 from app.auth import service
-from app.auth.repository import UserRepository
+from app.auth.models import JwtTokenType
+from app.auth.repository import AbstractUserRepository, UserRepository
 from app.auth.schemas import User
 
 oath2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/signin")
+RefreshTokenHeader = Annotated[str, Header(alias="X-Refresh-Token")]
 
 
-def get_user_repository(request: Request) -> UserRepository:
+def get_user_repository(request: Request) -> AbstractUserRepository:
     return UserRepository(request.app.state.db)
 
 
 async def get_current_user(
     token: str = Depends(oath2_scheme),
-    repo: UserRepository = Depends(get_user_repository),
+    repo: AbstractUserRepository = Depends(get_user_repository),
 ) -> User:
     payload: dict | None = service.verify_token(token)
 
@@ -32,3 +36,21 @@ async def get_current_user(
         )
 
     return User(**found_result)
+
+
+def get_refresh_token_payload(refresh_token: RefreshTokenHeader) -> dict:
+    payload = service.verify_token(refresh_token)
+
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token is invalid or expired",
+        )
+
+    if payload.get("type") != JwtTokenType.REFRESH:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid token type",
+        )
+
+    return payload

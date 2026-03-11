@@ -1,11 +1,13 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.auth import service
-from app.auth.dependencies import get_current_user, get_user_repository
-from app.auth.repository import UserRepository
+from app.auth.dependencies import (
+    get_current_user,
+    get_refresh_token_payload,
+    get_user_repository,
+)
+from app.auth.repository import AbstractUserRepository
 from app.auth.schemas import (
     RefreshOut,
     User,
@@ -15,14 +17,12 @@ from app.auth.schemas import (
     UserSignup,
 )
 
-RefreshTokenHeader = Annotated[str, Header(alias="X-Refresh-Token")]
-
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
 
 @router.post("/signup")
 async def signup(
-    user_in: UserSignup, repo: UserRepository = Depends(get_user_repository)
+    user_in: UserSignup, repo: AbstractUserRepository = Depends(get_user_repository)
 ) -> UserOut:
     new_user = await service.register_user(user_in, repo)
 
@@ -38,7 +38,7 @@ async def signup(
 @router.post("/signin")
 async def signin(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    repo: UserRepository = Depends(get_user_repository),
+    repo: AbstractUserRepository = Depends(get_user_repository),
 ) -> UserSigninOut:
     user_in = UserSignin(email=form_data.username, password=form_data.password)
 
@@ -54,15 +54,7 @@ async def signin(
 
 
 @router.post("/refresh")
-def refresh(refresh_token: RefreshTokenHeader) -> RefreshOut:
-    payload = service.verify_token(refresh_token)
-
-    if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token is invalid or expired",
-        )
-
+def refresh(payload: dict = Depends(get_refresh_token_payload)) -> RefreshOut:
     sub = payload["email"]
 
     return RefreshOut(**service.create_user_tokens(sub))
