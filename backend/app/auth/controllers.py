@@ -7,6 +7,7 @@ from app.auth.dependencies import (
     get_refresh_token_payload,
     get_user_repository,
 )
+from app.auth.models import UserPayload
 from app.auth.repository import AbstractUserRepository
 from app.auth.schemas import (
     RefreshOut,
@@ -54,10 +55,8 @@ async def signin(
 
 
 @router.post("/refresh")
-def refresh(payload: dict = Depends(get_refresh_token_payload)) -> RefreshOut:
-    sub = payload["email"]
-
-    return RefreshOut(**service.create_user_tokens(sub))
+def refresh(payload: UserPayload = Depends(get_refresh_token_payload)) -> RefreshOut:
+    return RefreshOut(**service.create_user_tokens(payload.email))
 
 
 @router.get("/me")

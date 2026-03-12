@@ -4,7 +4,7 @@ import jwt
 from pwdlib import PasswordHash
 from pydantic import EmailStr
 
-from app.auth.models import JwtTokenType
+from app.auth.models import JwtTokenType, UserPayload
 from app.auth.repository import AbstractUserRepository
 from app.auth.schemas import (
     UserSignin,
@@ -74,7 +74,7 @@ def generate_token(
     return token
 
 
-def verify_token(token: str) -> dict | None:
+def verify_token(token: str) -> UserPayload | None:
     try:
         payload: dict = jwt.decode(
             token, key=settings.APP_JWT_SECRET, algorithms=[settings.APP_JWT_ALG]
@@ -84,4 +84,4 @@ def verify_token(token: str) -> dict | None:
         print(error)
         return None
 
-    return payload
+    return UserPayload(**payload)

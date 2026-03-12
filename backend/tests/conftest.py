@@ -1,10 +1,12 @@
-from typing import AsyncGenerator
+from datetime import datetime
+from typing import AsyncGenerator, Callable, Generator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 from pydantic import EmailStr
 
-from app.auth.dependencies import get_user_repository
+from app.auth.dependencies import get_refresh_token_payload, get_user_repository
+from app.auth.models import JwtTokenType, UserPayload
 from app.auth.repository import AbstractUserRepository
 from app.main import app
 
@@ -21,6 +23,20 @@ class FakeRepository(AbstractUserRepository):
 
 
 @pytest.fixture
+def test_refresh_payload() -> UserPayload:
+    return UserPayload(
+        email="test@example.com", exp=datetime.now(), type=JwtTokenType.REFRESH
+    )
+
+
+@pytest.fixture
+def test_access_payload() -> UserPayload:
+    return UserPayload(
+        email="test@example.com", exp=datetime.now(), type=JwtTokenType.ACCESS
+    )
+
+
+@pytest.fixture
 async def fake_repo() -> AsyncGenerator[FakeRepository, None]:
     repo = FakeRepository()
 
@@ -28,7 +44,18 @@ async def fake_repo() -> AsyncGenerator[FakeRepository, None]:
 
     yield repo
 
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_user_repository, None)
+
+
+@pytest.fixture
+def fake_refresh_token_payload(
+    test_refresh_payload: UserPayload,
+) -> Generator[UserPayload, None, None]:
+    app.dependency_overrides[get_refresh_token_payload] = lambda: test_refresh_payload
+
+    yield test_refresh_payload
+
+    app.dependency_overrides.pop(get_refresh_token_payload, None)
 
 
 @pytest.fixture
@@ -58,3 +85,13 @@ def db_user(user_signup_payload: dict) -> dict:
         "email": user_signup_payload["email"],
         "_id": "mock_id",
     }
+
+
+@pytest.fixture
+def mock_verify_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Callable[[UserPayload | None], None]:
+    def _mock(return_value: UserPayload | None) -> None:
+        monkeypatch.setattr("app.auth.service.verify_token", lambda x: return_value)
+
+    return _mock
