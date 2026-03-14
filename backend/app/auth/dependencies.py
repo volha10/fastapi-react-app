@@ -20,7 +20,7 @@ async def get_current_user(
     token: str = Depends(oath2_scheme),
     repo: AbstractUserRepository = Depends(get_user_repository),
 ) -> User:
-    payload = service.verify_token(token)
+    payload = service.verify_token(token, expected_token_type=JwtTokenType.ACCESS)
 
     if not payload:
         raise HTTPException(
@@ -39,18 +39,14 @@ async def get_current_user(
 
 
 def get_refresh_token_payload(refresh_token: RefreshTokenHeader) -> UserPayload:
-    payload = service.verify_token(refresh_token)
+    payload = service.verify_token(
+        refresh_token, expected_token_type=JwtTokenType.REFRESH
+    )
 
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token is invalid or expired",
-        )
-
-    if payload.type != JwtTokenType.REFRESH:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid token type",
         )
 
     return payload

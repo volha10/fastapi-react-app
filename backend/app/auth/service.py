@@ -74,14 +74,19 @@ def generate_token(
     return token
 
 
-def verify_token(token: str) -> UserPayload | None:
+def verify_token(token: str, expected_token_type: JwtTokenType) -> UserPayload | None:
     try:
         payload: dict = jwt.decode(
             token, key=settings.APP_JWT_SECRET, algorithms=[settings.APP_JWT_ALG]
         )
         print(payload)
-    except (jwt.ExpiredSignatureError, jwt.exceptions.InvalidSignatureError) as error:
+
+        user_payload = UserPayload(**payload)
+
+        if user_payload.type != expected_token_type:
+            return None
+
+        return user_payload
+    except (jwt.ExpiredSignatureError, jwt.InvalidSignatureError) as error:
         print(error)
         return None
-
-    return UserPayload(**payload)

@@ -1,9 +1,11 @@
 from datetime import datetime
-from typing import AsyncGenerator, Callable, Generator
+from typing import AsyncGenerator, Generator
+from unittest.mock import MagicMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 from pydantic import EmailStr
+from pytest_mock import MockerFixture
 
 from app.auth.dependencies import get_refresh_token_payload, get_user_repository
 from app.auth.models import JwtTokenType, UserPayload
@@ -88,10 +90,5 @@ def db_user(user_signup_payload: dict) -> dict:
 
 
 @pytest.fixture
-def mock_verify_token(
-    monkeypatch: pytest.MonkeyPatch,
-) -> Callable[[UserPayload | None], None]:
-    def _mock(return_value: UserPayload | None) -> None:
-        monkeypatch.setattr("app.auth.service.verify_token", lambda x: return_value)
-
-    return _mock
+def mock_jwt_decode(mocker: MockerFixture) -> MagicMock:
+    return mocker.patch("app.auth.service.jwt.decode")

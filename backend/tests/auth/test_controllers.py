@@ -1,10 +1,14 @@
-from typing import Callable
+from dataclasses import asdict
+from unittest.mock import MagicMock
 
+import jwt
+import pytest
 from fastapi import status
 from httpx import AsyncClient
 from pwdlib import PasswordHash
 
 from app.auth.models import UserPayload
+from app.core.config import settings
 from tests.conftest import FakeRepository
 
 USERS_PATH = "api/v1/users"
@@ -141,10 +145,15 @@ async def test_refresh_response_data_on_success(
     assert "refresh_token" in response_data
 
 
+@pytest.mark.parametrize(
+    "jwt_error", [jwt.ExpiredSignatureError, jwt.InvalidSignatureError]
+)
 async def test_refresh_status_code_on_invalid_token(
-    async_client: AsyncClient, mock_verify_token: Callable[[UserPayload | None], None]
+    jwt_error: type[Exception],
+    async_client: AsyncClient,
+    mock_jwt_decode: MagicMock,
 ) -> None:
-    mock_verify_token(None)
+    mock_jwt_decode.side_effect = jwt_error
 
     response = await async_client.post(
         f"{USERS_PATH}/refresh", headers={"X-Refresh-Token": "some-dummy-token"}
@@ -153,10 +162,16 @@ async def test_refresh_status_code_on_invalid_token(
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+@pytest.mark.parametrize(
+    "jwt_error", [jwt.ExpiredSignatureError, jwt.InvalidSignatureError]
+)
 async def test_refresh_response_data_on_invalid_token(
-    async_client: AsyncClient, mock_verify_token: Callable[[UserPayload | None], None]
+    jwt_error: type[Exception],
+    async_client: AsyncClient,
+    mock_jwt_decode: MagicMock,
+    test_access_payload: UserPayload,
 ) -> None:
-    mock_verify_token(None)
+    mock_jwt_decode.side_effect = jwt_error
 
     response = await async_client.post(
         f"{USERS_PATH}/refresh", headers={"X-Refresh-Token": "some-dummy-token"}
@@ -167,27 +182,44 @@ async def test_refresh_response_data_on_invalid_token(
 
 async def test_refresh_status_code_on_wrong_token_type(
     async_client: AsyncClient,
-    mock_verify_token: Callable[[UserPayload | None], None],
+    mock_jwt_decode: MagicMock,
     test_access_payload: UserPayload,
 ) -> None:
-    mock_verify_token(test_access_payload)
+    mock_jwt_decode.return_value = asdict(test_access_payload)
 
     response = await async_client.post(
         f"{USERS_PATH}/refresh", headers={"X-Refresh-Token": "some-dummy-token"}
     )
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 async def test_refresh_response_data_on_wrong_token_type(
     async_client: AsyncClient,
-    mock_verify_token: Callable[[UserPayload | None], None],
+    mock_jwt_decode: MagicMock,
     test_access_payload: UserPayload,
 ) -> None:
-    mock_verify_token(test_access_payload)
+    mock_jwt_decode.return_value = asdict(test_access_payload)
 
     response = await async_client.post(
         f"{USERS_PATH}/refresh", headers={"X-Refresh-Token": "some-dummy-token"}
     )
 
-    assert response.json()["detail"] == "Invalid token type"
+    assert response.json()["detail"] == "Token is invalid or expired"
+
+
+async def test_refresh_call_jwt_decode_with_correct_arguments(
+    async_client: AsyncClient,
+    mock_jwt_decode: MagicMock,
+    test_refresh_payload: UserPayload,
+) -> None:
+    token_str = "some-real-looking-token"
+    mock_jwt_decode.return_value = asdict(test_refresh_payload)
+
+    await async_client.post(
+        f"/{USERS_PATH}/refresh", headers={"X-Refresh-Token": token_str}
+    )
+
+    mock_jwt_decode.assert_called_once_with(
+        token_str, key=settings.APP_JWT_SECRET, algorithms=[settings.APP_JWT_ALG]
+    )
