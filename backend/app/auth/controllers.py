@@ -8,7 +8,7 @@ from app.auth.dependencies import (
     get_user_repository,
 )
 from app.auth.models import UserPayload
-from app.auth.repository import AbstractUserRepository
+from app.auth.repositories import AbstractUserRepository
 from app.auth.schemas import (
     RefreshOut,
     User,

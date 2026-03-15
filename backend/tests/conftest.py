@@ -9,7 +9,7 @@ from pytest_mock import MockerFixture
 
 from app.auth.dependencies import get_refresh_token_payload, get_user_repository
 from app.auth.models import JwtTokenType, UserPayload
-from app.auth.repository import AbstractUserRepository
+from app.auth.repositories import AbstractUserRepository
 from app.main import app
 
 

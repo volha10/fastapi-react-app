@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordBearer
 
 from app.auth import service
 from app.auth.models import JwtTokenType, UserPayload
-from app.auth.repository import AbstractUserRepository, UserRepository
+from app.auth.repositories import AbstractUserRepository, UserRepository
 from app.auth.schemas import User
 
 oath2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/signin")

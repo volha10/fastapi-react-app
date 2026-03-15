@@ -5,7 +5,7 @@ from pwdlib import PasswordHash
 from pydantic import EmailStr
 
 from app.auth.models import JwtTokenType, UserPayload
-from app.auth.repository import AbstractUserRepository
+from app.auth.repositories import AbstractUserRepository
 from app.auth.schemas import (
     UserSignin,
     UserSignup,
