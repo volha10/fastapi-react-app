@@ -4,11 +4,13 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.auth import service
 from app.auth.dependencies import (
     get_current_user,
-    get_refresh_token_payload,
+    get_refresh_token_data,
+    get_refresh_token_repository,
     get_user_repository,
 )
+from app.auth.exceptions import TokenReuseError
 from app.auth.models import UserPayload
-from app.auth.repositories import AbstractUserRepository
+from app.auth.repositories import AbstractRefreshTokenRepository, AbstractUserRepository
 from app.auth.schemas import (
     RefreshOut,
     User,
@@ -39,24 +41,41 @@ async def signup(
 @router.post("/signin")
 async def signin(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    repo: AbstractUserRepository = Depends(get_user_repository),
+    user_repo: AbstractUserRepository = Depends(get_user_repository),
+    token_repo: AbstractRefreshTokenRepository = Depends(
+        dependency=get_refresh_token_repository
+    ),
 ) -> UserSigninOut:
     user_in = UserSignin(email=form_data.username, password=form_data.password)
 
-    found_result = await service.authenticate_user(user_in, repo)
+    found_user: User = await service.authenticate_user(user_in, user_repo)
 
-    if not found_result:
+    if not found_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
 
-    return UserSigninOut(**service.create_user_tokens(user_in.email))
+    tokens = await service.create_user_tokens(found_user.id, token_repo)
+
+    return UserSigninOut(**tokens)
 
 
 @router.post("/refresh")
-def refresh(payload: UserPayload = Depends(get_refresh_token_payload)) -> RefreshOut:
-    return RefreshOut(**service.create_user_tokens(payload.email))
+async def refresh(
+    token_data: tuple[UserPayload, str] = Depends(get_refresh_token_data),
+    token_repo: AbstractRefreshTokenRepository = Depends(get_refresh_token_repository),
+) -> RefreshOut:
+    payload, refresh_token = token_data
+
+    try:
+        new_tokens = await service.rotate_tokens(payload, refresh_token, token_repo)
+    except TokenReuseError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Security alert: Token reuse detected.",
+        )
+    return RefreshOut(**new_tokens)
 
 
 @router.get("/me")

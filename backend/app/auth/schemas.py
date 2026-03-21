@@ -23,7 +23,7 @@ class User(BaseModel):
     name: str
     email: EmailStr
 
-    password: str
+    password_hash: str
 
     model_config = ConfigDict(
         populate_by_name=True,

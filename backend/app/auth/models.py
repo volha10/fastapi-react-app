@@ -10,6 +10,6 @@ class JwtTokenType(enum.StrEnum):
 
 @dataclass(frozen=True)
 class UserPayload:
-    email: str
+    sub: str
     exp: datetime
     type: JwtTokenType

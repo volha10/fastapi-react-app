@@ -7,40 +7,41 @@ from httpx import ASGITransport, AsyncClient
 from pydantic import EmailStr
 from pytest_mock import MockerFixture
 
-from app.auth.dependencies import get_refresh_token_payload, get_user_repository
+from app.auth.dependencies import get_refresh_token_data, get_user_repository
 from app.auth.models import JwtTokenType, UserPayload
 from app.auth.repositories import AbstractUserRepository
+from app.auth.schemas import User
 from app.main import app
 
 
-class FakeRepository(AbstractUserRepository):
+class FakeUserRepository(AbstractUserRepository):
     def __init__(self) -> None:
         self.user = {}
 
     async def create(self, user_data: dict) -> dict | None:
         return self.user
 
-    async def get(self, email: EmailStr) -> dict | None:
+    async def get(self, email: EmailStr) -> User | None:
         return self.user
 
 
 @pytest.fixture
 def test_refresh_payload() -> UserPayload:
     return UserPayload(
-        email="test@example.com", exp=datetime.now(), type=JwtTokenType.REFRESH
+        sub="test_user_id_123", exp=datetime.now(), type=JwtTokenType.REFRESH
     )
 
 
 @pytest.fixture
 def test_access_payload() -> UserPayload:
     return UserPayload(
-        email="test@example.com", exp=datetime.now(), type=JwtTokenType.ACCESS
+        sub="test_user_id_123", exp=datetime.now(), type=JwtTokenType.ACCESS
     )
 
 
 @pytest.fixture
-async def fake_repo() -> AsyncGenerator[FakeRepository, None]:
-    repo = FakeRepository()
+async def fake_repo() -> AsyncGenerator[FakeUserRepository, None]:
+    repo = FakeUserRepository()
 
     app.dependency_overrides[get_user_repository] = lambda: repo
 
@@ -53,11 +54,12 @@ async def fake_repo() -> AsyncGenerator[FakeRepository, None]:
 def fake_refresh_token_payload(
     test_refresh_payload: UserPayload,
 ) -> Generator[UserPayload, None, None]:
-    app.dependency_overrides[get_refresh_token_payload] = lambda: test_refresh_payload
+    data: tuple = (test_refresh_payload, "random_token") 
+    app.dependency_overrides[get_refresh_token_data] = lambda: data
 
-    yield test_refresh_payload
+    yield data
 
-    app.dependency_overrides.pop(get_refresh_token_payload, None)
+    app.dependency_overrides.pop(get_refresh_token_data, None)
 
 
 @pytest.fixture

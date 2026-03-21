@@ -2,11 +2,12 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 from pwdlib import PasswordHash
-from pydantic import EmailStr
 
+from app.auth.exceptions import TokenReuseError
 from app.auth.models import JwtTokenType, UserPayload
-from app.auth.repositories import AbstractUserRepository
+from app.auth.repositories import AbstractRefreshTokenRepository, AbstractUserRepository
 from app.auth.schemas import (
+    User,
     UserSignin,
     UserSignup,
 )
@@ -29,28 +30,35 @@ async def register_user(
 
 async def authenticate_user(
     user_in: UserSignin, repo: AbstractUserRepository
-) -> dict | None:
-    found_result = await repo.get(user_in.email)
+) -> User | None:
+    found_user = await repo.get(user_in.email)
 
-    if not found_result or not password_hash.verify(
-        user_in.password, found_result["password"]
+    if not found_user or not password_hash.verify(
+        user_in.password, found_user.password_hash
     ):
         return None
 
-    return found_result
+    return found_user
 
 
-def create_user_tokens(email: EmailStr) -> dict:
+async def create_user_tokens(
+    user_id: str, token_repo: AbstractRefreshTokenRepository
+) -> dict:
     access_token = generate_token(
-        email,
+        user_id,
         timedelta(minutes=settings.APP_JWT_ACCESS_TOKEN_EXPIRE_MINUTES),
         JwtTokenType.ACCESS,
     )
     refresh_token = generate_token(
-        email,
+        user_id,
         timedelta(days=settings.APP_JWT_REFRESH_TOKEN_EXPIRE_DAYS),
         JwtTokenType.REFRESH,
     )
+
+    expired_at = datetime.now(timezone.utc) + timedelta(
+        days=settings.APP_JWT_REFRESH_TOKEN_EXPIRE_DAYS
+    )
+    await token_repo.create(user_id, refresh_token, expired_at)
 
     return {
         "access_token": access_token,
@@ -60,13 +68,13 @@ def create_user_tokens(email: EmailStr) -> dict:
 
 
 def generate_token(
-    email: EmailStr, expires_delta: timedelta, token_type: JwtTokenType
+    user_id: str, expires_delta: timedelta, token_type: JwtTokenType
 ) -> str:
     now = datetime.now(timezone.utc)
     exp = now + expires_delta
 
     token = jwt.encode(
-        {"email": email, "exp": exp, "type": token_type},
+        {"sub": user_id, "exp": exp, "type": token_type},
         key=settings.APP_JWT_SECRET,
         algorithm=settings.APP_JWT_ALG,
     )
@@ -90,3 +98,18 @@ def verify_token(token: str, expected_token_type: JwtTokenType) -> UserPayload |
     except (jwt.ExpiredSignatureError, jwt.InvalidSignatureError) as error:
         print(error)
         return None
+
+
+async def rotate_tokens(
+    payload: UserPayload, refresh_token: str, token_repo: AbstractRefreshTokenRepository
+) -> dict:
+    is_deleted = await token_repo.is_found_and_deleted(
+        payload.sub, refresh_token
+    )
+
+    if not is_deleted:
+        raise TokenReuseError()
+
+    tokens = await create_user_tokens(payload.sub, token_repo)
+
+    return tokens

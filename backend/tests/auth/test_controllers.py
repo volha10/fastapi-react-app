@@ -8,8 +8,9 @@ from httpx import AsyncClient
 from pwdlib import PasswordHash
 
 from app.auth.models import UserPayload
+from app.auth.schemas import User
 from app.core.config import settings
-from tests.conftest import FakeRepository
+from tests.conftest import FakeUserRepository
 
 USERS_PATH = "api/v1/users"
 USER_DATA = {"username": "test@example.com", "password": "test_password123"}
@@ -19,7 +20,7 @@ password_hash = PasswordHash.recommended()
 
 async def test_signup_status_code_on_success(
     async_client: AsyncClient,
-    fake_repo: FakeRepository,
+    fake_repo: FakeUserRepository,
     user_signup_payload: dict,
     db_user: dict,
 ) -> None:
@@ -32,7 +33,7 @@ async def test_signup_status_code_on_success(
 
 async def test_signup_response_data_on_success(
     async_client: AsyncClient,
-    fake_repo: FakeRepository,
+    fake_repo: FakeUserRepository,
     user_signup_payload: dict,
     db_user: dict,
 ) -> None:
@@ -49,7 +50,7 @@ async def test_signup_response_data_on_success(
 
 async def test_signup_status_code_on_conflict(
     async_client: AsyncClient,
-    fake_repo: FakeRepository,
+    fake_repo: FakeUserRepository,
     user_signup_payload: dict,
     db_user: dict,
 ) -> None:
@@ -62,7 +63,7 @@ async def test_signup_status_code_on_conflict(
 
 async def test_signup_response_data_on_conflict(
     async_client: AsyncClient,
-    fake_repo: FakeRepository,
+    fake_repo: FakeUserRepository,
     user_signup_payload: dict,
     db_user: dict,
 ) -> None:
@@ -74,14 +75,11 @@ async def test_signup_response_data_on_conflict(
 
 
 async def test_signin_status_code_on_success(
-    async_client: AsyncClient, fake_repo: FakeRepository
+    async_client: AsyncClient, fake_repo: FakeUserRepository
 ) -> None:
     """Verifies 200 OK for valid credentials."""
     raw_password = "secure_password"
-    fake_repo.user = {
-        "email": "test@example.com",
-        "password": password_hash.hash(raw_password),
-    }
+    fake_repo.user = User(id="random", email="test@example.com", password_hash=password_hash.hash(raw_password), name="random")
 
     response = await async_client.post(
         f"{USERS_PATH}/signin",
@@ -92,14 +90,11 @@ async def test_signin_status_code_on_success(
 
 
 async def test_signin_response_data_on_success(
-    async_client: AsyncClient, fake_repo: FakeRepository
+    async_client: AsyncClient, fake_repo: FakeUserRepository
 ) -> None:
     """Verifies the token structure in the response body."""
     raw_password = "secure_password"
-    fake_repo.user = {
-        "email": "test@example.com",
-        "password": password_hash.hash(raw_password),
-    }
+    fake_repo.user = User(id="random", email="test@example.com", password_hash=password_hash.hash(raw_password), name="random")
 
     response = await async_client.post(
         f"{USERS_PATH}/signin",
@@ -113,7 +108,7 @@ async def test_signin_response_data_on_success(
 
 
 async def test_signin_error_detail_on_invalid_credentials(
-    async_client: AsyncClient, fake_repo: FakeRepository
+    async_client: AsyncClient, fake_repo: FakeUserRepository
 ) -> None:
     """Verifies the specific exception detail message."""
     fake_repo.user = None
