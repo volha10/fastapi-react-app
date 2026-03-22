@@ -33,7 +33,7 @@ async def get_current_user(
             detail="Token is invalid or expired",
         )
 
-    found_result: User | None = await repo.get(payload.email)
+    found_result: User | None = await repo.get_by_id(payload.sub)
 
     if not found_result:
         raise HTTPException(

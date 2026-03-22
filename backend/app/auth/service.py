@@ -31,7 +31,7 @@ async def register_user(
 async def authenticate_user(
     user_in: UserSignin, repo: AbstractUserRepository
 ) -> User | None:
-    found_user = await repo.get(user_in.email)
+    found_user = await repo.get_by_email(user_in.email)
 
     if not found_user or not password_hash.verify(
         user_in.password, found_user.password_hash
@@ -103,9 +103,7 @@ def verify_token(token: str, expected_token_type: JwtTokenType) -> UserPayload |
 async def rotate_tokens(
     payload: UserPayload, refresh_token: str, token_repo: AbstractRefreshTokenRepository
 ) -> dict:
-    is_deleted = await token_repo.is_found_and_deleted(
-        payload.sub, refresh_token
-    )
+    is_deleted = await token_repo.is_found_and_deleted(payload.sub, refresh_token)
 
     if not is_deleted:
         raise TokenReuseError()

@@ -10,7 +10,7 @@ from pwdlib import PasswordHash
 from app.auth.models import UserPayload
 from app.auth.schemas import User
 from app.core.config import settings
-from tests.conftest import FakeUserRepository
+from tests.conftest import FakeRefreshTokenRepository, FakeUserRepository
 
 USERS_PATH = "api/v1/users"
 USER_DATA = {"username": "test@example.com", "password": "test_password123"}
@@ -20,11 +20,11 @@ password_hash = PasswordHash.recommended()
 
 async def test_signup_status_code_on_success(
     async_client: AsyncClient,
-    fake_repo: FakeUserRepository,
+    fake_user_repo: FakeUserRepository,
     user_signup_payload: dict,
     db_user: dict,
 ) -> None:
-    fake_repo.user = db_user
+    fake_user_repo.user = db_user
 
     response = await async_client.post(f"{USERS_PATH}/signup", json=user_signup_payload)
 
@@ -33,11 +33,11 @@ async def test_signup_status_code_on_success(
 
 async def test_signup_response_data_on_success(
     async_client: AsyncClient,
-    fake_repo: FakeUserRepository,
+    fake_user_repo: FakeUserRepository,
     user_signup_payload: dict,
     db_user: dict,
 ) -> None:
-    fake_repo.user = db_user
+    fake_user_repo.user = db_user
 
     response = await async_client.post(f"{USERS_PATH}/signup", json=user_signup_payload)
 
@@ -50,11 +50,11 @@ async def test_signup_response_data_on_success(
 
 async def test_signup_status_code_on_conflict(
     async_client: AsyncClient,
-    fake_repo: FakeUserRepository,
+    fake_user_repo: FakeUserRepository,
     user_signup_payload: dict,
     db_user: dict,
 ) -> None:
-    fake_repo.user = None
+    fake_user_repo.user = None
 
     response = await async_client.post(f"{USERS_PATH}/signup", json=user_signup_payload)
 
@@ -63,11 +63,11 @@ async def test_signup_status_code_on_conflict(
 
 async def test_signup_response_data_on_conflict(
     async_client: AsyncClient,
-    fake_repo: FakeUserRepository,
+    fake_user_repo: FakeUserRepository,
     user_signup_payload: dict,
     db_user: dict,
 ) -> None:
-    fake_repo.user = None
+    fake_user_repo.user = None
 
     response = await async_client.post(f"{USERS_PATH}/signup", json=user_signup_payload)
 
@@ -75,11 +75,17 @@ async def test_signup_response_data_on_conflict(
 
 
 async def test_signin_status_code_on_success(
-    async_client: AsyncClient, fake_repo: FakeUserRepository
+    async_client: AsyncClient, fake_user_repo: FakeUserRepository
 ) -> None:
     """Verifies 200 OK for valid credentials."""
+
     raw_password = "secure_password"
-    fake_repo.user = User(id="random", email="test@example.com", password_hash=password_hash.hash(raw_password), name="random")
+    fake_user_repo.user = User(
+        id="random",
+        email="test@example.com",
+        password_hash=password_hash.hash(raw_password),
+        name="random",
+    )
 
     response = await async_client.post(
         f"{USERS_PATH}/signin",
@@ -90,11 +96,16 @@ async def test_signin_status_code_on_success(
 
 
 async def test_signin_response_data_on_success(
-    async_client: AsyncClient, fake_repo: FakeUserRepository
+    async_client: AsyncClient, fake_user_repo: FakeUserRepository
 ) -> None:
     """Verifies the token structure in the response body."""
     raw_password = "secure_password"
-    fake_repo.user = User(id="random", email="test@example.com", password_hash=password_hash.hash(raw_password), name="random")
+    fake_user_repo.user = User(
+        id="random",
+        email="test@example.com",
+        password_hash=password_hash.hash(raw_password),
+        name="random",
+    )
 
     response = await async_client.post(
         f"{USERS_PATH}/signin",
@@ -108,10 +119,10 @@ async def test_signin_response_data_on_success(
 
 
 async def test_signin_error_detail_on_invalid_credentials(
-    async_client: AsyncClient, fake_repo: FakeUserRepository
+    async_client: AsyncClient, fake_user_repo: FakeUserRepository
 ) -> None:
     """Verifies the specific exception detail message."""
-    fake_repo.user = None
+    fake_user_repo.user = None
 
     response = await async_client.post(
         f"{USERS_PATH}/signin",
@@ -122,17 +133,44 @@ async def test_signin_error_detail_on_invalid_credentials(
 
 
 async def test_refresh_status_code_on_success(
-    async_client: AsyncClient, fake_refresh_token_payload: UserPayload
+    async_client: AsyncClient,
+    test_refresh_token_payload: UserPayload,
+    fake_refresh_token_repo: FakeRefreshTokenRepository,
+    mock_jwt_decode: MagicMock,
 ) -> None:
-    response = await async_client.post(url=f"{USERS_PATH}/refresh")
+    mock_jwt_decode.return_value = asdict(test_refresh_token_payload)
+
+    valid_refresh_token = "some-valid-token"
+    fake_refresh_token_repo.token = {
+        "user_id": test_refresh_token_payload.sub,
+        "token_hash": "some-valid-token-hash",
+        "exprired_at": test_refresh_token_payload.exp,
+    }
+
+    response = await async_client.post(
+        f"/{USERS_PATH}/refresh", headers={"X-Refresh-Token": valid_refresh_token}
+    )
 
     assert response.status_code == status.HTTP_200_OK
 
 
 async def test_refresh_response_data_on_success(
-    async_client: AsyncClient, fake_refresh_token_payload: UserPayload
+    async_client: AsyncClient,
+    test_refresh_token_payload: UserPayload,
+    fake_refresh_token_repo: FakeRefreshTokenRepository,
+    mock_jwt_decode: MagicMock,
 ) -> None:
-    response = await async_client.post(url=f"{USERS_PATH}/refresh")
+    mock_jwt_decode.return_value = asdict(test_refresh_token_payload)
+
+    fake_refresh_token_repo.token = {
+        "user_id": test_refresh_token_payload.sub,
+        "token_hash": "some-valid-token-hash",
+        "exprired_at": test_refresh_token_payload.exp,
+    }
+    response = await async_client.post(
+        url=f"{USERS_PATH}/refresh",
+        headers={"X-Refresh-Token": "some-valid-token-hash"},
+    )
 
     response_data = response.json()
     assert response_data["token_type"] == "Bearer"
@@ -164,7 +202,7 @@ async def test_refresh_response_data_on_invalid_token(
     jwt_error: type[Exception],
     async_client: AsyncClient,
     mock_jwt_decode: MagicMock,
-    test_access_payload: UserPayload,
+    test_access_token_payload: UserPayload,
 ) -> None:
     mock_jwt_decode.side_effect = jwt_error
 
@@ -178,9 +216,9 @@ async def test_refresh_response_data_on_invalid_token(
 async def test_refresh_status_code_on_wrong_token_type(
     async_client: AsyncClient,
     mock_jwt_decode: MagicMock,
-    test_access_payload: UserPayload,
+    test_access_token_payload: UserPayload,
 ) -> None:
-    mock_jwt_decode.return_value = asdict(test_access_payload)
+    mock_jwt_decode.return_value = asdict(test_access_token_payload)
 
     response = await async_client.post(
         f"{USERS_PATH}/refresh", headers={"X-Refresh-Token": "some-dummy-token"}
@@ -192,9 +230,9 @@ async def test_refresh_status_code_on_wrong_token_type(
 async def test_refresh_response_data_on_wrong_token_type(
     async_client: AsyncClient,
     mock_jwt_decode: MagicMock,
-    test_access_payload: UserPayload,
+    test_access_token_payload: UserPayload,
 ) -> None:
-    mock_jwt_decode.return_value = asdict(test_access_payload)
+    mock_jwt_decode.return_value = asdict(test_access_token_payload)
 
     response = await async_client.post(
         f"{USERS_PATH}/refresh", headers={"X-Refresh-Token": "some-dummy-token"}
@@ -206,10 +244,10 @@ async def test_refresh_response_data_on_wrong_token_type(
 async def test_refresh_call_jwt_decode_with_correct_arguments(
     async_client: AsyncClient,
     mock_jwt_decode: MagicMock,
-    test_refresh_payload: UserPayload,
+    test_refresh_token_payload: UserPayload,
 ) -> None:
     token_str = "some-real-looking-token"
-    mock_jwt_decode.return_value = asdict(test_refresh_payload)
+    mock_jwt_decode.return_value = asdict(test_refresh_token_payload)
 
     await async_client.post(
         f"/{USERS_PATH}/refresh", headers={"X-Refresh-Token": token_str}
@@ -218,3 +256,82 @@ async def test_refresh_call_jwt_decode_with_correct_arguments(
     mock_jwt_decode.assert_called_once_with(
         token_str, key=settings.APP_JWT_SECRET, algorithms=[settings.APP_JWT_ALG]
     )
+
+
+async def test_refresh_status_code_on_token_reuse_error(
+    async_client: AsyncClient,
+    fake_refresh_token_data_dependency: tuple[UserPayload, str],
+) -> None:
+    """Verify that valid but missing in DB refresh token returns 401."""
+
+    response = await async_client.post(
+        f"{USERS_PATH}/refresh", headers={"X-Refresh-Token": "some-dummy-token"}
+    )
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+async def test_refresh_response_data_on_token_reuse_error(
+    async_client: AsyncClient,
+    fake_refresh_token_data_dependency: tuple[UserPayload, str],
+) -> None:
+    """Verify that valid but missing in DB refresh token contains the correct error detail."""
+
+    response = await async_client.post(
+        f"{USERS_PATH}/refresh", headers={"X-Refresh-Token": "some-dummy-token"}
+    )
+
+    assert response.json()["detail"] == "Security alert: Token reuse detected"
+
+
+async def test_me_status_code_on_success(
+    async_client: AsyncClient,
+    fake_current_user_dependency: User,
+) -> None:
+    """Verify that a request with valid credentials returns 200."""
+
+    response = await async_client.get(f"/{USERS_PATH}/me")
+
+    assert response.status_code == status.HTTP_200_OK
+
+
+async def test_me_response_data_on_success(
+    async_client: AsyncClient,
+    fake_current_user_dependency: User,
+) -> None:
+    response = await async_client.get(
+        url=f"{USERS_PATH}/me",
+    )
+    """Verify that a request with valid credentials returns correct data."""
+
+    response_data = response.json()
+
+    assert response_data == {
+        "id": "random_id",
+        "name": "random name",
+        "email": "test@example.com",
+    }
+    assert "password" not in response_data
+    assert "password_hash" not in response_data
+
+
+async def test_me_unauthorized_status_code(
+    async_client: AsyncClient,
+) -> None:
+    """Verify that a request without credentials returns 401."""
+
+    response = await async_client.get(f"/{USERS_PATH}/me")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+async def test_me_unauthorized_response_data(
+    async_client: AsyncClient,
+) -> None:
+    """Verify that a request without credentials returns correct error detail."""
+
+    response = await async_client.get(f"/{USERS_PATH}/me")
+
+    response_data = response.json()
+
+    assert response_data == {"detail": "Not authenticated"}

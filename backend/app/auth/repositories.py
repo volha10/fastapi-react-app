@@ -15,7 +15,11 @@ class AbstractUserRepository(ABC):
         pass
 
     @abstractmethod
-    async def get(self, email: str) -> User | None:
+    async def get_by_email(self, email: str) -> User | None:
+        pass
+
+    @abstractmethod
+    async def get_by_id(self, id: str) -> User | None:
         pass
 
 
@@ -37,8 +41,17 @@ class UserRepository(AbstractUserRepository):
 
         return new_user
 
-    async def get(self, email: EmailStr) -> User | None:
+    async def get_by_email(self, email: EmailStr) -> User | None:
         result = await self.collection.find_one({"email": email})
+        return User(
+            id=result["_id"],
+            name=result["name"],
+            email=result["email"],
+            password_hash=result["password"],
+        )
+
+    async def get_by_id(self, id: str) -> User | None:
+        result = await self.collection.find_one({"_id": id})
         return User(
             id=result["_id"],
             name=result["name"],
@@ -48,6 +61,9 @@ class UserRepository(AbstractUserRepository):
 
 
 class AbstractRefreshTokenRepository(ABC):
+    @abstractmethod
+    def _hash_token(self, token: str) -> str: ...
+
     @abstractmethod
     async def create(
         self, user_id: str, refresh_token: str, expired_at: datetime
@@ -74,9 +90,7 @@ class MongoRefreshTokenRepository(AbstractRefreshTokenRepository):
                 "exprired_at": expired_at,
             }
         )
-        new_token = await self.collection.find_one(
-            {"_id": inserted_result.inserted_id}
-        )
+        new_token = await self.collection.find_one({"_id": inserted_result.inserted_id})
 
         print(f"New refresh token for user {new_token['user_id']} created successfully")
 

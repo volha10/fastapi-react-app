@@ -48,7 +48,7 @@ async def signin(
 ) -> UserSigninOut:
     user_in = UserSignin(email=form_data.username, password=form_data.password)
 
-    found_user: User = await service.authenticate_user(user_in, user_repo)
+    found_user: User | None = await service.authenticate_user(user_in, user_repo)
 
     if not found_user:
         raise HTTPException(
@@ -73,7 +73,7 @@ async def refresh(
     except TokenReuseError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Security alert: Token reuse detected.",
+            detail="Security alert: Token reuse detected",
         )
     return RefreshOut(**new_tokens)
 
