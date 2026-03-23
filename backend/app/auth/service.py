@@ -106,8 +106,15 @@ async def rotate_tokens(
     is_deleted = await token_repo.is_found_and_deleted(payload.sub, refresh_token)
 
     if not is_deleted:
+        token_repo.revoke_all(user_id=payload.sub)
         raise TokenReuseError()
 
     tokens = await create_user_tokens(payload.sub, token_repo)
 
     return tokens
+
+
+async def logout(
+    sub: str, refresh_token: str, token_repo: AbstractRefreshTokenRepository
+) -> None:
+    await token_repo.is_found_and_deleted(sub, refresh_token)

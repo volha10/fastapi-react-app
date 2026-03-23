@@ -72,6 +72,9 @@ class AbstractRefreshTokenRepository(ABC):
     @abstractmethod
     async def is_found_and_deleted(self, user_id: str, refresh_token: str) -> bool: ...
 
+    @abstractmethod
+    async def revoke_all(self, user_id: str) -> None:...
+
 
 class MongoRefreshTokenRepository(AbstractRefreshTokenRepository):
     def __init__(self, db: AsyncDatabase) -> None:
@@ -99,6 +102,10 @@ class MongoRefreshTokenRepository(AbstractRefreshTokenRepository):
             {"user_id": user_id, "token_hash": self._hash_token(refresh_token)}
         )
 
-        print(f"Token {found_token} was deleted successfully")
+        if found_token:
+            print(f"Token {found_token} was deleted successfully")
 
         return found_token is not None
+
+    async def revoke_all(self, user_id: str) -> None:
+        await self.collection.delete_many({"user_id": user_id})

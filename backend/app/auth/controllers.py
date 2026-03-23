@@ -79,5 +79,15 @@ async def refresh(
 
 
 @router.get("/me")
-def get_me(current_user: User = Depends(get_current_user)) -> UserOut:
+async def get_me(current_user: User = Depends(get_current_user)) -> UserOut:
     return UserOut(**current_user.model_dump())
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(
+    token_data: tuple[UserPayload, str] = Depends(get_refresh_token_data),
+    token_repo: AbstractRefreshTokenRepository = Depends(get_refresh_token_repository),
+) -> None:
+    user_payload, refresh_token  = token_data
+
+    await service.logout(user_payload.sub, refresh_token, token_repo)
