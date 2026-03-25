@@ -50,6 +50,8 @@ class FakeRefreshTokenRepository(AbstractRefreshTokenRepository):
     async def is_found_and_deleted(self, user_id: str, refresh_token: str) -> bool:
         return self.token is not None
 
+    async def revoke_all(self, user_id: str) -> None: ...
+
 
 @pytest.fixture
 def test_refresh_token_payload() -> UserPayload:
