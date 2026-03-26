@@ -95,7 +95,11 @@ def verify_token(token: str, expected_token_type: JwtTokenType) -> UserPayload |
             return None
 
         return user_payload
-    except (jwt.ExpiredSignatureError, jwt.InvalidSignatureError) as error:
+    except (
+        jwt.ExpiredSignatureError,
+        jwt.InvalidSignatureError,
+        jwt.DecodeError,
+    ) as error:
         print(error)
         return None
 

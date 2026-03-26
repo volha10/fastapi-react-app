@@ -6,6 +6,7 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 from pwdlib import PasswordHash
+from pytest_mock import MockerFixture
 
 from app.auth.models import UserPayload
 from app.auth.schemas import User
@@ -335,3 +336,54 @@ async def test_me_unauthorized_response_data(
     response_data = response.json()
 
     assert response_data == {"detail": "Not authenticated"}
+
+
+async def test_logout_status_code_if_valid_token_was_found_in_db(
+    async_client: AsyncClient,
+    fake_refresh_token_data_dependency: tuple[UserPayload, str],
+    fake_refresh_token_repo: FakeRefreshTokenRepository,
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch.object(
+        fake_refresh_token_repo, "is_found_and_deleted", return_value=True
+    )
+
+    response = await async_client.post(
+        f"{USERS_PATH}/logout", headers={"X-Refresh-Token": "dummy"}
+    )
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+
+async def test_logout_status_code_if_valid_token_was_not_found_in_db(
+    async_client: AsyncClient,
+    fake_refresh_token_data_dependency: tuple[UserPayload, str],
+    fake_refresh_token_repo: FakeRefreshTokenRepository,
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch.object(
+        fake_refresh_token_repo, "is_found_and_deleted", return_value=False
+    )
+
+    response = await async_client.post(
+        f"{USERS_PATH}/logout", headers={"X-Refresh-Token": "dummy"}
+    )
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+
+async def test_logout_status_code_if_invalid_token(async_client: AsyncClient) -> None:
+    response = await async_client.post(
+        f"{USERS_PATH}/logout", headers={"X-Refresh-Token": "dummy"}
+    )
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+async def test_logout_response_data_if_invalid_token(async_client: AsyncClient) -> None:
+    response = await async_client.post(
+        f"{USERS_PATH}/logout", headers={"X-Refresh-Token": "dummy"}
+    )
+    response_data = response.json()
+
+    assert response_data == {"detail": "Token is invalid or expired"}
