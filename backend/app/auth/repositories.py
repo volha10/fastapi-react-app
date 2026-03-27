@@ -2,8 +2,10 @@ import hashlib
 from abc import ABC, abstractmethod
 from datetime import datetime
 
+from bson.objectid import ObjectId
 from pydantic import EmailStr
 from pymongo import errors
+from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.auth.schemas import User
@@ -11,7 +13,7 @@ from app.auth.schemas import User
 
 class AbstractUserRepository(ABC):
     @abstractmethod
-    async def create(self, user_data: dict) -> dict | None:
+    async def create(self, user_data: dict) -> User | None:
         pass
 
     @abstractmethod
@@ -25,9 +27,9 @@ class AbstractUserRepository(ABC):
 
 class UserRepository(AbstractUserRepository):
     def __init__(self, db: AsyncDatabase) -> None:
-        self.collection = db["users"]
+        self.collection: AsyncCollection = db.get_collection("users")
 
-    async def create(self, user_data: dict) -> dict | None:
+    async def create(self, user_data: dict) -> User | None:
         try:
             insert_result = await self.collection.insert_one(user_data)
 
@@ -35,28 +37,32 @@ class UserRepository(AbstractUserRepository):
                 {"_id": insert_result.inserted_id}
             )
 
-            print(f"New user {new_user['_id']} created successfully")
+            if not new_user:
+                return None
+
+            print(f"New user {new_user.get('_id')} created successfully")
+
+            return self._map_to_domain(new_user)
+
         except errors.DuplicateKeyError:
             return None
 
-        return new_user
-
     async def get_by_email(self, email: EmailStr) -> User | None:
         result = await self.collection.find_one({"email": email})
-        return User(
-            id=result["_id"],
-            name=result["name"],
-            email=result["email"],
-            password_hash=result["password"],
-        )
+
+        return self._map_to_domain(result) if result else None
 
     async def get_by_id(self, id: str) -> User | None:
-        result = await self.collection.find_one({"_id": id})
+        result = await self.collection.find_one({"_id": ObjectId(id)})
+
+        return self._map_to_domain(result) if result else None
+
+    def _map_to_domain(self, document: dict) -> User:
         return User(
-            id=result["_id"],
-            name=result["name"],
-            email=result["email"],
-            password_hash=result["password"],
+            id=document["_id"],
+            name=document["name"],
+            email=document["email"],
+            password_hash=document["password"],
         )
 
 
@@ -78,7 +84,7 @@ class AbstractRefreshTokenRepository(ABC):
 
 class MongoRefreshTokenRepository(AbstractRefreshTokenRepository):
     def __init__(self, db: AsyncDatabase) -> None:
-        self.collection = db["refresh_tokens"]
+        self.collection: AsyncCollection = db.get_collection("refresh_tokens")
 
     def _hash_token(self, token: str) -> str:
         return hashlib.sha256(token.encode()).hexdigest()
@@ -95,7 +101,7 @@ class MongoRefreshTokenRepository(AbstractRefreshTokenRepository):
         )
         new_token = await self.collection.find_one({"_id": inserted_result.inserted_id})
 
-        print(f"New refresh token for user {new_token['user_id']} created successfully")
+        print(f"New refresh token for user {new_token['user_id']} created successfully")  # type: ignore
 
     async def is_found_and_deleted(self, user_id: str, refresh_token: str) -> bool:
         found_token = await self.collection.find_one_and_delete(

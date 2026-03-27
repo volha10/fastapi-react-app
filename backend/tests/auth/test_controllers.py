@@ -76,17 +76,12 @@ async def test_signup_response_data_on_conflict(
 
 
 async def test_signin_status_code_on_success(
-    async_client: AsyncClient, fake_user_repo: FakeUserRepository
+    async_client: AsyncClient, fake_user_repo: FakeUserRepository, db_user: dict
 ) -> None:
     """Verifies 200 OK for valid credentials."""
 
     raw_password = "secure_password"
-    fake_user_repo.user = User(
-        id="random",
-        email="test@example.com",
-        password_hash=password_hash.hash(raw_password),
-        name="random",
-    )
+    fake_user_repo.user = db_user
 
     response = await async_client.post(
         f"{USERS_PATH}/signin",
@@ -97,16 +92,11 @@ async def test_signin_status_code_on_success(
 
 
 async def test_signin_response_data_on_success(
-    async_client: AsyncClient, fake_user_repo: FakeUserRepository
+    async_client: AsyncClient, fake_user_repo: FakeUserRepository, db_user: dict
 ) -> None:
     """Verifies the token structure in the response body."""
     raw_password = "secure_password"
-    fake_user_repo.user = User(
-        id="random",
-        email="test@example.com",
-        password_hash=password_hash.hash(raw_password),
-        name="random",
-    )
+    fake_user_repo.user = db_user
 
     response = await async_client.post(
         f"{USERS_PATH}/signin",
@@ -308,8 +298,8 @@ async def test_me_response_data_on_success(
     response_data = response.json()
 
     assert response_data == {
-        "id": "random_id",
-        "name": "random name",
+        "id": "mock_id",
+        "name": "test user",
         "email": "test@example.com",
     }
     assert "password" not in response_data

@@ -18,12 +18,12 @@ password_hash = PasswordHash.recommended()
 
 async def register_user(
     user_in: UserSignup, repo: AbstractUserRepository
-) -> dict | None:
+) -> User | None:
     hash = password_hash.hash(user_in.password)
 
     hashed_user = UserSignup(**user_in.model_dump(exclude={"password"}), password=hash)
 
-    new_user = await repo.create(hashed_user.model_dump())
+    new_user: User | None = await repo.create(hashed_user.model_dump())
 
     return new_user
 
@@ -110,7 +110,7 @@ async def rotate_tokens(
     is_deleted = await token_repo.is_found_and_deleted(payload.sub, refresh_token)
 
     if not is_deleted:
-        token_repo.revoke_all(user_id=payload.sub)
+        await token_repo.revoke_all(user_id=payload.sub)
         raise TokenReuseError()
 
     tokens = await create_user_tokens(payload.sub, token_repo)

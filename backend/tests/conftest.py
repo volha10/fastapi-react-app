@@ -26,14 +26,22 @@ class FakeUserRepository(AbstractUserRepository):
     def __init__(self) -> None:
         self.user = {}
 
-    async def create(self, user_data: dict) -> dict | None:
-        return self.user
+    async def create(self, user_data: dict) -> User | None:
+        return self._map_to_domain(self.user) if self.user else None
 
     async def get_by_email(self, email: EmailStr) -> User | None:
-        return self.user
+        return self._map_to_domain(self.user) if self.user else None
 
     async def get_by_id(self, id: str) -> User | None:
-        return self.user
+        return self._map_to_domain(self.user) if self.user else None
+
+    def _map_to_domain(self, document: dict) -> User:
+        return User(
+            id=document["_id"],
+            name=document["name"],
+            email=document["email"],
+            password_hash=document["password"],
+        )
 
 
 class FakeRefreshTokenRepository(AbstractRefreshTokenRepository):
@@ -68,12 +76,33 @@ def test_access_token_payload() -> UserPayload:
 
 
 @pytest.fixture
-def test_user() -> User:
+def user_signup_payload() -> dict:
+    """Provides valid signup data."""
+    return {
+        "name": "test user",
+        "email": "test@example.com",
+        "password": "secure_password",
+    }
+
+
+@pytest.fixture
+def db_user(user_signup_payload: dict) -> dict:
+    """Provides a mock DB user based on the signup data."""
+    return {
+        "_id": "mock_id",
+        "name": user_signup_payload["name"],
+        "email": user_signup_payload["email"],
+        "password": password_hash.hash(user_signup_payload["password"]),
+    }
+
+
+@pytest.fixture
+def test_user(db_user: dict) -> User:
     return User(
-        id="random_id",
-        email="test@example.com",
-        password_hash=password_hash.hash("secure_password"),
-        name="random name",
+        id=db_user["_id"],
+        email=db_user["email"],
+        name=db_user["name"],
+        password_hash=db_user["password"],
     )
 
 
@@ -127,26 +156,6 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
             yield client
-
-
-@pytest.fixture
-def user_signup_payload() -> dict:
-    """Provides valid signup data."""
-    return {
-        "name": "test user",
-        "email": "test@example.com",
-        "password": "test_password123",
-    }
-
-
-@pytest.fixture
-def db_user(user_signup_payload: dict) -> dict:
-    """Provides a mock DB user based on the signup data."""
-    return {
-        "name": user_signup_payload["name"],
-        "email": user_signup_payload["email"],
-        "_id": "mock_id",
-    }
 
 
 @pytest.fixture

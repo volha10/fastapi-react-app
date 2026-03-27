@@ -35,7 +35,7 @@ async def signup(
             detail="The user with this email already exists",
         )
 
-    return UserOut(**new_user)
+    return UserOut(**new_user.model_dump())
 
 
 @router.post("/signin")
@@ -87,7 +87,7 @@ async def get_me(current_user: User = Depends(get_current_user)) -> UserOut:
 async def logout(
     token_data: tuple[UserPayload, str] = Depends(get_refresh_token_data),
     token_repo: AbstractRefreshTokenRepository = Depends(get_refresh_token_repository),
-) -> None:
+) -> Response:
     user_payload, refresh_token = token_data
 
     await service.logout(user_payload.sub, refresh_token, token_repo)
