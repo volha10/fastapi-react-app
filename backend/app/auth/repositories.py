@@ -96,7 +96,7 @@ class MongoRefreshTokenRepository(AbstractRefreshTokenRepository):
             {
                 "user_id": user_id,
                 "token_hash": self._hash_token(refresh_token),
-                "exprired_at": expired_at,
+                "expired_at": expired_at,
             }
         )
         new_token = await self.collection.find_one({"_id": inserted_result.inserted_id})

@@ -16,6 +16,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app.state.db = client.get_database("auth_db")
         # await app.state.db["users"].drop()
         await app.state.db["users"].create_index("email", unique=True)
+
+        # await app.state.db["refresh_tokens"].drop()
+        # TTL index for refresh token's expired_at field
+        await app.state.db["refresh_tokens"].create_index(
+            "expired_at", expireAfterSeconds=0
+        )
+        await app.state.db["refresh_tokens"].create_index(
+            [("user_id", 1), ("token_hash", 1)]
+        )
         yield
 
 

@@ -135,7 +135,7 @@ async def test_refresh_status_code_on_success(
     fake_refresh_token_repo.token = {
         "user_id": test_refresh_token_payload.sub,
         "token_hash": "some-valid-token-hash",
-        "exprired_at": test_refresh_token_payload.exp,
+        "expired_at": test_refresh_token_payload.exp,
     }
 
     response = await async_client.post(
@@ -156,7 +156,7 @@ async def test_refresh_response_data_on_success(
     fake_refresh_token_repo.token = {
         "user_id": test_refresh_token_payload.sub,
         "token_hash": "some-valid-token-hash",
-        "exprired_at": test_refresh_token_payload.exp,
+        "expired_at": test_refresh_token_payload.exp,
     }
     response = await async_client.post(
         url=f"{USERS_PATH}/refresh",
