@@ -81,7 +81,7 @@ const AuthProvider = ({ children }) => {
 
             } else {
                 console.log("Error fetching me: ", result);
-                logout(); // Session truly invalid
+                await logout(); // Session truly invalid
             }
         }
         catch (error) {
@@ -92,7 +92,30 @@ const AuthProvider = ({ children }) => {
         }
     }
 
-    const logout = () => {
+    const logout = async () => {
+        const refreshToken = localStorage.getItem("refresh_token");
+
+        if (refreshToken) {
+            try {
+                const response = await fetch("http://localhost:8000/api/v1/users/logout", {
+                    method: "POST",
+                    headers: { "X-Refresh-Token": refreshToken }
+                });
+                if (response.ok) {
+                    console.log("Successfully logout");
+                } else {
+                    const result = await response.json();
+                    console.log("Logout failed: ", result);
+                }
+
+            } catch (error) {
+                console.log("Server logout failed: ", error);
+            }
+        }
+        cleanLocalStorageAndUser();
+    }
+
+    const cleanLocalStorageAndUser = () => {
         localStorage.removeItem("refresh_token");
         localStorage.removeItem("access_token");
 

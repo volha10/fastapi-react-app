@@ -52,7 +52,7 @@ const LoginPage = () => {
       const result = await response.json();
 
       if (response.ok) {
-        console.log("Success: ", JSON.stringify(result));
+        console.log("Signed in successfully: ", JSON.stringify(result));
         localStorage.setItem("access_token", result.access_token);
         localStorage.setItem("refresh_token", result.refresh_token);
 

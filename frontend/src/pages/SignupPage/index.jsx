@@ -45,7 +45,7 @@ const SignupPage = () => {
       const result = await response.json();
 
       if (response.ok) {
-        console.log("Success: ", JSON.stringify(result));
+        console.log("Signed up successfully: ", JSON.stringify(result));
         navigate("/login");
 
       } else if (response.status == 409) {
