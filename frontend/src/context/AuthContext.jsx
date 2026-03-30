@@ -38,7 +38,7 @@ const AuthProvider = ({ children }) => {
         }
 
         // If refresh fails, clear everything
-        logout();
+        await logout();
         return null;
 
     }
@@ -67,7 +67,7 @@ const AuthProvider = ({ children }) => {
 
                 if (newAccessToken) {
                     // Retry 'me' with the new Access token
-                    response = await fetch("", {
+                    response = await fetch("http://localhost:8000/api/v1/users/me", {
                         method: "GET",
                         headers: { Authorization: `Bearer ${newAccessToken}` }
                     });
