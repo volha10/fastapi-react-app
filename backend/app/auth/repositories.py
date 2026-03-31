@@ -13,7 +13,7 @@ from app.auth.schemas import User
 
 class AbstractUserRepository(ABC):
     @abstractmethod
-    async def create(self, user_data: dict) -> User | None:
+    async def create(self, data: dict) -> User | None:
         pass
 
     @abstractmethod
@@ -24,14 +24,18 @@ class AbstractUserRepository(ABC):
     async def get_by_id(self, id: str) -> User | None:
         pass
 
+    @abstractmethod
+    async def update(self, id: str, data: dict) -> User:
+        pass
+
 
 class UserRepository(AbstractUserRepository):
     def __init__(self, db: AsyncDatabase) -> None:
         self.collection: AsyncCollection = db.get_collection("users")
 
-    async def create(self, user_data: dict) -> User | None:
+    async def create(self, data: dict) -> User | None:
         try:
-            insert_result = await self.collection.insert_one(user_data)
+            insert_result = await self.collection.insert_one(data)
 
             new_user = await self.collection.find_one(
                 {"_id": insert_result.inserted_id}
@@ -56,6 +60,13 @@ class UserRepository(AbstractUserRepository):
         result = await self.collection.find_one({"_id": ObjectId(id)})
 
         return self._map_to_domain(result) if result else None
+
+    async def update(self, id: str, data: dict) -> User:
+        result = await self.collection.find_one_and_update(
+            {"_id": ObjectId(id)}, {"$set": data}, return_document=True
+        )
+
+        return self._map_to_domain(result)
 
     def _map_to_domain(self, document: dict) -> User:
         return User(

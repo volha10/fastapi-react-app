@@ -8,6 +8,7 @@ from app.auth.models import JwtTokenType, UserPayload
 from app.auth.repositories import AbstractRefreshTokenRepository, AbstractUserRepository
 from app.auth.schemas import (
     User,
+    UserPatchIn,
     UserSignin,
     UserSignup,
 )
@@ -39,6 +40,12 @@ async def authenticate_user(
         return None
 
     return found_user
+
+
+async def patch_user(
+    user_id: str, user_data: UserPatchIn, repo: AbstractUserRepository
+) -> User:
+    return await repo.update(user_id, user_data.model_dump())
 
 
 async def create_user_tokens(

@@ -26,7 +26,7 @@ class FakeUserRepository(AbstractUserRepository):
     def __init__(self) -> None:
         self.user = {}
 
-    async def create(self, user_data: dict) -> User | None:
+    async def create(self, data: dict) -> User | None:
         return self._map_to_domain(self.user) if self.user else None
 
     async def get_by_email(self, email: EmailStr) -> User | None:

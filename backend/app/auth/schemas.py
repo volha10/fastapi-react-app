@@ -16,6 +16,10 @@ class UserSignin(BaseModel):
     password: str
 
 
+class UserPatchIn(BaseModel):
+    name: str
+
+
 class User(BaseModel):
     # validation_alias = read from DB as '_id'
     # field name 'id' = output to JSON as 'id'

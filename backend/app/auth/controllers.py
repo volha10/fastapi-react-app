@@ -15,6 +15,7 @@ from app.auth.schemas import (
     RefreshOut,
     User,
     UserOut,
+    UserPatchIn,
     UserSignin,
     UserSigninOut,
     UserSignup,
@@ -81,6 +82,16 @@ async def refresh(
 @router.get("/me")
 async def get_me(current_user: User = Depends(get_current_user)) -> UserOut:
     return UserOut(**current_user.model_dump())
+
+
+@router.patch("/me")
+async def patch_me(
+    user_data: UserPatchIn,
+    current_user: User = Depends(get_current_user),
+    user_repo: AbstractUserRepository = Depends(get_user_repository),
+) -> UserOut:
+    user = await service.patch_user(current_user.id, user_data, user_repo)
+    return UserOut(**user.model_dump())
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
