@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useState } from "react";
+import React, { createContext, useEffect, useState, useRef } from "react";
 
 export const AuthContext = createContext();
 
@@ -8,38 +8,51 @@ const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    const refreshPromise = useRef(null);
+
     const refresh = async () => {
-        const refreshToken = localStorage.getItem("refresh_token");
+        if (refreshPromise.current) return refreshPromise.current;
 
-        if (!refreshToken) return null;
+        refreshPromise.current = (async () => {
+            const refreshToken = localStorage.getItem("refresh_token");
 
-        try {
-            const response = await fetch("http://localhost:8000/api/v1/users/refresh", {
-                method: "POST",
-                headers: { "X-Refresh-Token": refreshToken },
-            });
+            if (!refreshToken) return null;
 
-            const result = await response.json();
+            try {
+                console.log("Sending refresh to server");
 
-            if (response.ok) {
-                // Rotation: save new both tokens
-                localStorage.setItem("refresh_token", result.refresh_token);
-                localStorage.setItem("access_token", result.access_token);
+                const response = await fetch("http://localhost:8000/api/v1/users/refresh", {
+                    method: "POST",
+                    headers: { "X-Refresh-Token": refreshToken },
+                });
 
-                return result.access_token;
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Rotation: save new both tokens
+                    localStorage.setItem("refresh_token", result.refresh_token);
+                    localStorage.setItem("access_token", result.access_token);
+
+                    return result.access_token;
+                }
+                else {
+                    console.log("Refresh failed", result);
+                }
+
+            } catch (error) {
+                console.log("Refresh failed", error);
+            } finally {
+                console.log("Clear promise");
+                refreshPromise.current = null;
             }
-            else {
-                console.log("Refresh failed", result);
-            }
-        }
 
-        catch (error) {
-            console.log("Refresh failed", error);
-        }
+            // If refresh fails, clear everything
+            cleanLocalStorageAndUser();
+            return null;
 
-        // If refresh fails, clear everything
-        await logout();
-        return null;
+        })();
+
+        return refreshPromise.current;
 
     }
 
