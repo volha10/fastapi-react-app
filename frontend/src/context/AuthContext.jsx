@@ -60,8 +60,11 @@ const AuthProvider = ({ children }) => {
         // Delay of 5 seconds for testing
         await new Promise(resolve => setTimeout(resolve, 5000));
 
+        console.log("Check tokens in storage...");
         const accessToken = localStorage.getItem("access_token");
+
         if (!accessToken) {
+            console.log("No access token found, stopping.");
             setLoading(false);
             return;
         };
@@ -105,6 +108,51 @@ const AuthProvider = ({ children }) => {
         }
     }
 
+    const updateProfile = async (newName) => {
+        const accessToken = localStorage.getItem("access_token");
+
+        try {
+            let response = await fetch("http://localhost:8000/api/v1/users/me", {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({ name: newName })
+            })
+
+            if (response.status == 401) {
+                console.log("Access token expired, attempting refresh...")
+                const newAccessToken = await refresh();
+
+                if (newAccessToken) {
+                    response = await fetch("http://localhost:8000/api/v1/users/me", {
+                        method: "PATCH",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${newAccessToken}`
+                        },
+                        body: JSON.stringify({ name: newName })
+                    })                    
+                }
+            }
+
+            const result = await response.json()
+
+            if (response.ok) {
+                setUser(result);
+                return { success: true };
+            } else {
+                console.log("Error patching me: ", result)
+                return { success: false, error: result };
+            }
+
+        } catch (error) {
+            console.log("Error patching me: ", error);
+            return { success: false, error: error.message };
+        }
+    }
+
     const logout = async () => {
         const refreshToken = localStorage.getItem("refresh_token");
 
@@ -140,7 +188,7 @@ const AuthProvider = ({ children }) => {
     }, []);
 
     return (
-        <AuthContext.Provider value={{ user, logout, loading, fetchMe }}>{children}</AuthContext.Provider>
+        <AuthContext.Provider value={{ user, logout, loading, fetchMe, updateProfile }}>{children}</AuthContext.Provider>
     )
 }
 
